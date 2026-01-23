@@ -1,23 +1,27 @@
 package auth
 
 import (
-	"fmt"
 	"golang/configs"
 	"golang/pkg/req"
 	"golang/pkg/res"
 	"net/http"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthHandlerDeps struct {
 	*configs.Config
+	*AuthService
 }
 type AuthHandler struct {
 	*configs.Config
+	*AuthService
 }
 
 func NewAuthHandler(router *http.ServeMux, deps AuthHandlerDeps) {
 	handler := &AuthHandler{
-		Config: deps.Config,
+		Config:      deps.Config,
+		AuthService: deps.AuthService,
 	}
 	router.HandleFunc("POST /auth/login", handler.Login())
 	router.HandleFunc("POST /auth/register", handler.Register())
@@ -25,13 +29,20 @@ func NewAuthHandler(router *http.ServeMux, deps AuthHandlerDeps) {
 
 func (handler *AuthHandler) Login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBode[LoginRequest](&w, r)
+		body, err := req.HandleBody[LoginRequest](&w, r)
 		if err != nil {
 			return
 		}
-		fmt.Println(body)
+		email, err := handler.AuthService.Login(body.Email, body.Password)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		}
+		token, err := jwt.NewJWT(handler.Config.Auth.Secret).Create(email)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		data := LoginResponse{
-			Token: "123",
+			Token: token,
 		}
 		res.Json(w, data, 200)
 	}
@@ -39,10 +50,21 @@ func (handler *AuthHandler) Login() http.HandlerFunc {
 
 func (handler *AuthHandler) Register() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBode[RegisterRequest](&w, r)
+		body, err := req.HandleBody[RegisterRequest](&w, r)
 		if err != nil {
 			return
 		}
-		fmt.Println(body)
+		email, err := handler.AuthService.Register(body.Email, body.Password, body.Name)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		}
+		token, err := jwt.NewJWT(handler.Config.Auth.Secret).Create(email)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		data := RegisterResponse{
+			Token: token,
+		}
+		res.Json(w, data, 200)
 	}
 }
