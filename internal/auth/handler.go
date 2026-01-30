@@ -2,11 +2,10 @@ package auth
 
 import (
 	"golang/configs"
+	"golang/pkg/jwt"
 	"golang/pkg/req"
 	"golang/pkg/res"
 	"net/http"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthHandlerDeps struct {
@@ -37,7 +36,9 @@ func (handler *AuthHandler) Login() http.HandlerFunc {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 		}
-		token, err := jwt.NewJWT(handler.Config.Auth.Secret).Create(email)
+		token, err := jwt.NewJWT(handler.Config.Auth.Secret).Create(jwt.JWTData{
+			Email: email,
+		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -58,7 +59,9 @@ func (handler *AuthHandler) Register() http.HandlerFunc {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 		}
-		token, err := jwt.NewJWT(handler.Config.Auth.Secret).Create(email)
+		token, err := jwt.NewJWT(handler.Config.Auth.Secret).Create(jwt.JWTData{
+			Email: email,
+		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
